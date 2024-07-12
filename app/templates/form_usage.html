@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Usage</title>
+</head>
+<body>
+    <h1>Dynamic Form Usage</h1>
+    <div id="dynamicForm"></div>
+    <button onclick="saveData()">Enter the Data</button>
+    <button onclick="refreshData()">Refresh</button><br>
+    <h2>Fact Table</h2>
+    <div id="salesTableContainer"></div>
+
+    <script>
+        async function fetchData(url) {
+            const response = await fetch(url);
+            return response.json();
+        }
+
+        async function createDynamicForm() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const rowModels = urlParams.getAll('row_models');
+            const columnModels = urlParams.getAll('column_models');
+            
+            const dynamicForm = document.getElementById('dynamicForm');
+            dynamicForm.innerHTML = '';
+            const table = document.createElement('table');
+            table.border = 1;
+
+            const columnData = await fetchData(`/api/${columnModels}s`);
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+
+            headerRow.innerHTML = '<th></th><th></th>';
+            columnData.forEach(cData => {
+                const th = document.createElement('th');
+                th.textContent = columnModels[0] === 'customer'
+                    ? `${cData.customer_name} ${cData.customer_surname}`
+                    : cData.product_name || cData.timestamp_name;
+                headerRow.appendChild(th);
+            });
+
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+
+            const primaryRowData = await fetchData(`/api/${rowModels[0]}s`);
+            const secondaryRowData = await fetchData(`/api/${rowModels[1]}s`);
+
+            primaryRowData.forEach(primaryRow => {
+                const rowSpan = secondaryRowData.length;
+                const primaryRowCell = document.createElement('td');
+                primaryRowCell.rowSpan = rowSpan;
+                primaryRowCell.textContent = rowModels[0] === 'customer'
+                    ? `${primaryRow.customer_name} ${primaryRow.customer_surname}`
+                    : primaryRow.product_name || primaryRow.timestamp_name;
+
+                secondaryRowData.forEach((secondaryRow, index) => {
+                    const row = document.createElement('tr');
+                    if (index === 0) {
+                        row.appendChild(primaryRowCell);
+                    }
+
+                    const secondaryRowCell = document.createElement('td');
+                    secondaryRowCell.textContent = rowModels[1] === 'customer'
+                        ? `${secondaryRow.customer_name} ${secondaryRow.customer_surname}`
+                        : secondaryRow.product_name || secondaryRow.timestamp_name;
+                    row.appendChild(secondaryRowCell);
+
+                    columnData.forEach(cData => {
+                        const dataCell = document.createElement('td');
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.name = `data_${rowModels[0]}_${primaryRow[rowModels[0] + '_id']}_${rowModels[1]}_${secondaryRow[rowModels[1] + '_id']}_${cData}_${cData[columnModels + '_id']}`;
+                        dataCell.appendChild(input);
+                        row.appendChild(dataCell);
+                    });
+
+                    tbody.appendChild(row);
+                });
+            });
+
+            table.appendChild(tbody);
+            dynamicForm.appendChild(table);
+        }
+
+        async function saveData() {
+            const formData = [];
+            document.querySelectorAll('input').forEach(input => {
+                const inputNameParts = input.name.split('_');
+                const rowModel1 = inputNameParts[1];
+                const rowId1 = parseInt(inputNameParts[2]);
+                const rowModel2 = inputNameParts[3];
+                const rowId2 = parseInt(inputNameParts[4]);
+                const rowModel3 = inputNameParts[5]
+                const rowId3 = parseInt(inputNameParts[6]);
+                 
+                const dataValue = input.value.trim();
+                
+                if (dataValue !== '') {
+                    let customer_id, product_id, timestamp_id;
+                    switch (rowModel1) {
+                        case 'customer':
+                            customer_id = rowId1;
+                            product_id = rowModel2 === 'product' ? rowId2 : rowId3;
+                            timestamp_id = rowModel2 === 'timestamp' ? rowId2 : rowId3;
+                            break;
+                        case 'product':
+                            product_id = rowId1;
+                            customer_id = rowModel2 === 'customer' ? rowId2 : rowId3;
+                            timestamp_id = rowModel2 === 'timestamp' ? rowId2 : rowId3;
+                            break;
+                        case 'timestamp':
+                            timestamp_id = rowId1;
+                            customer_id = rowModel2 === 'customer' ? rowId2 : rowId3;
+                            product_id = rowModel2 === 'product' ? rowId2 : rowId3;
+                            break;
+                        default:
+                            break;
+                    }
+
+                    formData.push({
+                        customer_id,
+                        product_id,
+                        timestamp_id,
+                        cost: Number(dataValue)
+                    });
+                }
+            });
+
+            try {
+                const response = await fetch('/api/sales', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('HTTP error ' + response.status);
+                }
+                
+                alert("Data has been registered successfully.");
+            } catch (error) {
+                console.error("Data could not be registered:", error);
+                alert("Data could not be registered.");
+            }
+        }
+
+        async function refreshData() {
+            const salesData = await fetchData('/api/sales');
+    
+            document.querySelectorAll('input').forEach(input => {
+             input.value = '';
+            });
+
+            const salesMap = new Map();
+            salesData.forEach(data => {
+                const key = `${data.customer_id || ''}_${data.product_id || ''}_${data.timestamp_id || ''}`;
+                salesMap.set(key, data.cost);
+            });
+
+            document.querySelectorAll('input').forEach(input => {
+                const inputNameParts = input.name.split('_');
+                const rowModel1 = inputNameParts[1];
+                const rowId1 = parseInt(inputNameParts[2]);
+                const rowModel2 = inputNameParts[3];
+                const rowId2 = parseInt(inputNameParts[4]);
+                const rowModel3 = inputNameParts[5];
+                const rowId3 = parseInt(inputNameParts[6]);
+
+                const key1 = `${rowModel1 === 'customer' ? rowId1 : ''}_${rowModel1 === 'product' ? rowId1 : ''}_${rowModel1 === 'timestamp' ? rowId1 : ''}`;
+                const key2 = `${rowModel2 === 'customer' ? rowId2 : ''}_${rowModel2 === 'product' ? rowId2 : ''}_${rowModel2 === 'timestamp' ? rowId2 : ''}`;
+                const columnKey = `${rowModel3 === 'customer' ? rowId3 : ''}_${rowModel3 === 'product' ? rowId3 : ''}_${rowModel3 === 'timestamp' ? rowId3 : ''}`;
+
+                const key = `${key1}_${key2}_${columnKey}`;
+                if (salesMap.has(key)) {
+                    input.value = salesMap.get(key);
+                }
+            });
+
+            const salesTableContainer = document.getElementById('salesTableContainer');
+            salesTableContainer.innerHTML = '';
+
+            if (salesData.length > 0) {
+                const table = document.createElement('table');
+                table.border = 1;
+
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                headerRow.innerHTML = '<th>Customer ID</th><th>Product ID</th><th>Timestamp ID</th><th>Cost</th>';
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                const tbody = document.createElement('tbody');
+
+                salesData.forEach(data => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${data.customer_id}</td><td>${data.product_id}</td><td>${data.timestamp_id}</td><td>${data.cost}</td>`;
+                    tbody.appendChild(row);
+                });
+
+                table.appendChild(tbody);
+                salesTableContainer.appendChild(table);
+            }
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            createDynamicForm();
+        });
+    </script>
+</body>
+</html>

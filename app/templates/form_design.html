@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Design</title>
+</head>
+<body>
+    <h1>Dynamic Form Design</h1>
+    <p>Please select dimension(s) for dynamic form</p><br>
+    <form action="{{ url_for('form_design') }}" method="post">
+        <label>For row:</label><br>
+        <input type="checkbox" name="row_models" value="customer"> Customer<br>
+        <input type="checkbox" name="row_models" value="product"> Product<br>
+        <input type="checkbox" name="row_models" value="timestamp"> Timestamp<br><br>
+        
+        <label>For Coloumn:</label><br>
+        <input type="checkbox" name="column_models" value="customer"> Customer<br>
+        <input type="checkbox" name="column_models" value="product"> Product<br>
+        <input type="checkbox" name="column_models" value="timestamp"> Timestamp<br><br>
+
+        <input type="submit" value="Create the Form" onclick="submitForm">
+    </form>
+    <script>
+        function submitForm() {
+            const form = document.getElementById('designForm');
+            const rowModels = Array.from(form.querySelectorAll('input[name="row_models"]:checked'))
+                .map(input => input.value).join(',');
+            const columnModels = Array.from(form.querySelectorAll('input[name="column_models"]:checked'))
+                .map(input => input.value).join(',');
+
+            if (rowModels.length < 2 || columnModels.length === 0) {
+                alert('Please pick 2 dimensions for row and 1 dimension for column.');
+                return;
+            }
+
+            if (rowModels.length > 2 || columnModels.length > 2) {
+                alert('You can choose 2 options for the row/column at most');
+                return;
+            }
+
+            if (rowModels.some(value => columnModels.includes(value))) {
+                alert('You cannot choose the same dimension for both row and column.');
+                return;
+            }
+
+            const url = `{{ url_for('form_usage') }}?row_models=${rowModels}&column_models=${columnModels}`;
+            window.location.href = url;
+        }
+    </script>
+</body>
+</html>

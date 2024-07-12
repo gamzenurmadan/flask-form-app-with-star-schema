@@ -1,7 +1,6 @@
 services:
   psql-db:
     image: postgres
-    restart: always
     container_name: psql-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -11,5 +10,28 @@ services:
       - "5432:5432"
     volumes:
       - db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 20s
+      retries: 5
+
+  flask-backend:
+    build: ./
+    container_name: flask-backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      psql-db:
+        condition: service_healthy
+    environment:
+      RDS_USERNAME: ${POSTGRES_USER}
+      RDS_PASSWORD: ${POSTGRES_PASSWORD}
+      RDS_HOSTNAME: psql-db
+      RDS_PORT: 5432
+      RDS_DB_NAME: ${POSTGRES_DB}
+    volumes:
+      - ./app:/app/app
+
 volumes:
   db-volume:

@@ -8,8 +8,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY app app
-COPY run.py .
+COPY app /app/app
+COPY run.py /app
 
 EXPOSE 5000
 

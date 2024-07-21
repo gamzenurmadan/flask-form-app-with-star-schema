@@ -31,5 +31,5 @@ def create_app():
     @app.route("/form-usage", methods=["GET", "POST"])
     def form_usage():
         return render_template('form_usage.html')
-
+    
     return app

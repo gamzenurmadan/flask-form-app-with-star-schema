@@ -1,17 +1,19 @@
+version: '3.8'
+
 services:
   psql-db:
     image: postgres
     container_name: psql-db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${RDS_USERNAME}
+      POSTGRES_PASSWORD: ${RDS_PASSWORD}
+      POSTGRES_DB: ${RDS_DB_NAME}
     ports:
       - "5432:5432"
     volumes:
       - db-volume:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${RDS_USERNAME} -d ${RDS_DB_NAME}"]
       interval: 5s
       timeout: 20s
       retries: 5
@@ -25,13 +27,14 @@ services:
       psql-db:
         condition: service_healthy
     environment:
-      RDS_USERNAME: ${POSTGRES_USER}
-      RDS_PASSWORD: ${POSTGRES_PASSWORD}
+      RDS_USERNAME: ${RDS_USERNAME}
+      RDS_PASSWORD: ${RDS_PASSWORD}
       RDS_HOSTNAME: psql-db
       RDS_PORT: 5432
-      RDS_DB_NAME: ${POSTGRES_DB}
+      RDS_DB_NAME: ${RDS_DB_NAME}
     volumes:
       - ./app:/app/app
+      - ./run.py:/app/run.py
 
 volumes:
   db-volume:
